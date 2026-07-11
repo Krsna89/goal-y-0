@@ -2,6 +2,7 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const store = require('./db');
+const webpush = require('./webpush');
 
 const PORT = process.env.PORT || 3000;
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -243,6 +244,84 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { ok: true });
   }
 
+  // GET /api/push/vapid-public-key  (public — needed before subscribing)
+  if (pathname === '/api/push/vapid-public-key' && req.method === 'GET') {
+    return sendJson(res, 200, { key: webpush.vapidPublicKey });
+  }
+
+  // POST /api/push/subscribe { subscription }
+  if (pathname === '/api/push/subscribe' && req.method === 'POST') {
+    const user = getAuthedUser(req);
+    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
+    const body = await readBody(req);
+    const sub = body.subscription;
+    if (!sub || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+      return sendJson(res, 400, { error: 'Invalid subscription.' });
+    }
+    store.upsertPushSubscription(user.id, sub.endpoint, sub.keys.p256dh, sub.keys.auth);
+    return sendJson(res, 200, { ok: true });
+  }
+
+  // POST /api/push/unsubscribe { endpoint }
+  if (pathname === '/api/push/unsubscribe' && req.method === 'POST') {
+    const user = getAuthedUser(req);
+    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
+    const body = await readBody(req);
+    if (body.endpoint) store.removePushSubscriptionForUser(user.id, body.endpoint);
+    return sendJson(res, 200, { ok: true });
+  }
+
+  // GET /api/notifications/prefs
+  if (pathname === '/api/notifications/prefs' && req.method === 'GET') {
+    const user = getAuthedUser(req);
+    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
+    const p = store.getNotificationPrefs(user.id);
+    return sendJson(res, 200, {
+      selfReminderEnabled: !!p.self_reminder_enabled,
+      selfReminderTime: p.self_reminder_time,
+      selfReminderTz: p.self_reminder_tz,
+      partnerMode: p.partner_mode,
+      partnerQuietThreshold: p.partner_quiet_threshold,
+      partnerDigestFreq: p.partner_digest_freq,
+    });
+  }
+
+  // POST /api/notifications/prefs { selfReminderEnabled?, selfReminderTime?, selfReminderTz?,
+  //                                  partnerMode?, partnerQuietThreshold?, partnerDigestFreq? }
+  if (pathname === '/api/notifications/prefs' && req.method === 'POST') {
+    const user = getAuthedUser(req);
+    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
+    const body = await readBody(req);
+    const fields = {};
+    if (typeof body.selfReminderEnabled === 'boolean') {
+      fields.self_reminder_enabled = body.selfReminderEnabled ? 1 : 0;
+    }
+    if (typeof body.selfReminderTime === 'string' && /^([01]\d|2[0-3]):([0-5]\d)$/.test(body.selfReminderTime)) {
+      fields.self_reminder_time = body.selfReminderTime;
+    }
+    if (typeof body.selfReminderTz === 'string' && body.selfReminderTz.length > 0 && body.selfReminderTz.length < 64) {
+      fields.self_reminder_tz = body.selfReminderTz;
+    }
+    if (['off', 'quiet', 'digest'].includes(body.partnerMode)) {
+      fields.partner_mode = body.partnerMode;
+    }
+    if (Number.isInteger(body.partnerQuietThreshold) && body.partnerQuietThreshold >= 1 && body.partnerQuietThreshold <= 14) {
+      fields.partner_quiet_threshold = body.partnerQuietThreshold;
+    }
+    if (['daily', 'weekly'].includes(body.partnerDigestFreq)) {
+      fields.partner_digest_freq = body.partnerDigestFreq;
+    }
+    const p = store.updateNotificationPrefs(user.id, fields);
+    return sendJson(res, 200, {
+      selfReminderEnabled: !!p.self_reminder_enabled,
+      selfReminderTime: p.self_reminder_time,
+      selfReminderTz: p.self_reminder_tz,
+      partnerMode: p.partner_mode,
+      partnerQuietThreshold: p.partner_quiet_threshold,
+      partnerDigestFreq: p.partner_digest_freq,
+    });
+  }
+
   return sendJson(res, 404, { error: 'Not found.' });
 }
 
@@ -287,6 +366,137 @@ const server = http.createServer(async (req, res) => {
   serveStatic(req, res, url.pathname);
 });
 
+// ---------- notification scheduler ----------
+//
+// Runs in-process (no separate cron job needed) since the Starter plan
+// keeps this service always-on. Checks every few minutes for anyone due
+// a self-reminder or a partner alert, and sends a Web Push notification.
+
+async function sendAndCleanup(sub, payload) {
+  try {
+    const res = await webpush.sendPush(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      payload
+    );
+    if (res.statusCode === 404 || res.statusCode === 410) {
+      store.removePushSubscription(sub.endpoint);
+    } else if (res.statusCode >= 400) {
+      console.error('Push send returned', res.statusCode, res.body);
+    }
+  } catch (e) {
+    console.error('Push send failed:', e.message);
+  }
+}
+
+async function runSelfReminders() {
+  const now = new Date();
+  const candidates = store.getUsersWithSelfReminderEnabled();
+  for (const u of candidates) {
+    const tz = u.self_reminder_tz || 'UTC';
+    let hhmm, todayLocal;
+    try {
+      hhmm = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+      todayLocal = new Intl.DateTimeFormat('en-CA', { timeZone: tz }).format(now);
+    } catch (e) {
+      continue; // unrecognized timezone string — skip rather than crash the sweep
+    }
+    if (hhmm !== u.self_reminder_time) continue;
+    if (u.self_last_sent_date === todayLocal) continue;
+
+    const loggedToday = store.getHabitsForDate(u.id, store.todayStr());
+    const hasLoggedAny = Object.values(loggedToday).some(Boolean);
+    if (!hasLoggedAny) {
+      const subs = store.getPushSubscriptionsForUser(u.id);
+      for (const sub of subs) {
+        await sendAndCleanup(sub, {
+          title: 'Goal-y-o',
+          body: "You haven't logged your habit today — quick tap?",
+          tag: 'self-reminder',
+        });
+      }
+    }
+    store.markSelfReminderSent(u.id, todayLocal);
+  }
+}
+
+async function runPartnerAlerts() {
+  const links = store.getAcceptedLinksWithPartnerPrefs();
+  const byPartner = new Map();
+  for (const link of links) {
+    if (!byPartner.has(link.partner_id)) byPartner.set(link.partner_id, []);
+    byPartner.get(link.partner_id).push(link);
+  }
+
+  for (const [partnerId, partnerLinks] of byPartner) {
+    const mode = partnerLinks[0].partner_mode;
+
+    if (mode === 'quiet') {
+      for (const link of partnerLinks) {
+        const owner = store.getUserById(link.owner_id);
+        if (!owner) continue;
+        const ownerLastLogged = store.lastLoggedDate(link.owner_id);
+        const days = store.daysSince(ownerLastLogged);
+        const key = ownerLastLogged || 'never';
+        if (days >= (link.partner_quiet_threshold || 2) && link.quiet_alert_for_date !== key) {
+          const subs = store.getPushSubscriptionsForUser(partnerId);
+          for (const sub of subs) {
+            await sendAndCleanup(sub, {
+              title: 'Goal-y-o',
+              body: `${owner.name} has gone quiet — check in?`,
+              tag: 'partner-quiet-' + link.id,
+            });
+          }
+          store.setQuietAlertFlag(link.id, key);
+        }
+      }
+    } else if (mode === 'digest') {
+      const freqDays = partnerLinks[0].partner_digest_freq === 'weekly' ? 7 : 1;
+      const last = partnerLinks[0].partner_last_digest_date;
+      const daysSinceDigest = last ? store.daysSince(last) : Infinity;
+      if (daysSinceDigest >= freqDays) {
+        const lines = partnerLinks
+          .map((link) => {
+            const owner = store.getUserById(link.owner_id);
+            if (!owner) return null;
+            const streak = store.calcStreak(link.owner_id);
+            return `${owner.name}: ${streak}\u{1F525}`;
+          })
+          .filter(Boolean);
+        if (lines.length) {
+          const subs = store.getPushSubscriptionsForUser(partnerId);
+          for (const sub of subs) {
+            await sendAndCleanup(sub, {
+              title: 'Goal-y-o check-in',
+              body: lines.join(' · '),
+              tag: 'partner-digest',
+            });
+          }
+        }
+        store.markPartnerDigestSent(partnerId, store.todayStr());
+      }
+    }
+  }
+}
+
+async function runNotificationSweep() {
+  if (!webpush.isConfigured) return;
+  try {
+    await runSelfReminders();
+    await runPartnerAlerts();
+  } catch (e) {
+    console.error('Notification sweep failed:', e);
+  }
+}
+
+const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+
 server.listen(PORT, () => {
   console.log(`Goal-y-o running on http://localhost:${PORT}`);
+  if (webpush.isConfigured) {
+    console.log('Push notifications: configured — starting reminder sweep every 5 minutes.');
+    setInterval(runNotificationSweep, SWEEP_INTERVAL_MS);
+    runNotificationSweep();
+  } else {
+    console.log('Push notifications: VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set — notifications disabled.');
+  }
 });

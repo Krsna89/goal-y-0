@@ -107,6 +107,19 @@
           </div>
         </div>
 
+        <div class="section-title">Reminders</div>
+        <div class="reminder-card">
+          <label class="checkbox-row">
+            <input type="checkbox" id="reminder-toggle" />
+            <span>Remind me if I haven't logged today</span>
+          </label>
+          <div id="reminder-time-row" class="row hidden">
+            <input type="time" id="reminder-time" value="19:00" />
+            <button class="btn-secondary" id="reminder-save">Save</button>
+          </div>
+          <div id="reminder-status" class="muted" style="margin-top:8px; font-size:13px;"></div>
+        </div>
+
         <div class="section-title">Accountability</div>
         <div class="invite-card">
           <div style="margin-bottom:8px; font-size:14px;">Nominate someone to see your progress and cheer you on.</div>
@@ -123,6 +136,36 @@
 
       <!-- WATCHING VIEW -->
       <div id="view-watching" class="screen hidden">
+        <div class="notify-settings-card">
+          <div class="section-title" style="margin-top:0;">How I want to hear about people I'm watching</div>
+          <div class="radio-row">
+            <label><input type="radio" name="partner-mode" value="off" /> Off</label>
+            <label><input type="radio" name="partner-mode" value="quiet" /> Notify when someone goes quiet</label>
+            <label><input type="radio" name="partner-mode" value="digest" /> Regular check-in digest</label>
+          </div>
+          <div id="quiet-threshold-row" class="row hidden">
+            <span class="muted" style="font-size:13px;">After</span>
+            <select id="quiet-threshold">
+              <option value="1">1 day</option>
+              <option value="2">2 days</option>
+              <option value="3">3 days</option>
+              <option value="5">5 days</option>
+              <option value="7">7 days</option>
+            </select>
+            <span class="muted" style="font-size:13px;">of no activity</span>
+          </div>
+          <div id="digest-freq-row" class="row hidden">
+            <select id="digest-freq">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </div>
+          <div class="row" style="margin-top:12px;">
+            <button class="btn-secondary" id="partner-notify-save">Save</button>
+          </div>
+          <div id="partner-notify-status" class="muted" style="margin-top:8px; font-size:13px;"></div>
+        </div>
+
         <div class="section-title" style="margin-top:0;">People you're watching</div>
         <div id="watching-list"></div>
       </div>

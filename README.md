@@ -26,7 +26,7 @@ For real, ongoing testing — where the data needs to survive for weeks, not jus
 
 **1. Put the code on GitHub (no git command line needed):**
 - Go to github.com, sign in (or create a free account), click "New repository," name it `gratyent-lite`, create it.
-- On the new repo's page, click "uploading an existing file," then drag in every file from this folder (`server.js`, `db.js`, `package.json`, the `public` folder, this `README.md`) — but **not** `gratyent.db`, that's your local data file, not code. Commit.
+- On the new repo's page, click "uploading an existing file," then drag in every file from this folder (`server.js`, `db.js`, `webpush.js`, `package.json`, the `public` folder, this `README.md`) — but **not** `gratyent.db`, that's your local data file, not code. Commit.
 
 **2. Create the Render service:**
 - Go to render.com, sign up (you can sign in with your GitHub account directly).
@@ -40,6 +40,21 @@ For real, ongoing testing — where the data needs to survive for weeks, not jus
 - Deploy.
 
 Render will give you a URL like `https://gratyent-lite.onrender.com` — that's what you text or WhatsApp to your brother-in-law and his wife. It'll stay up and keep their data, independent of your own computer being on.
+
+## Push notifications
+
+Both roles can opt into reminders: the person tracking habits can set a daily time to be nudged if they haven't logged yet, and anyone watching someone else can choose to be notified when that person goes quiet, or get a regular check-in digest instead. Everything is off by default — each person turns it on for themselves from the app.
+
+This uses the browser Push API directly (no third-party notification service), authenticated with a VAPID key pair. **Never commit the private key to this repo — it's public.** Instead, set it as a Render environment variable:
+
+- `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` — a matching key pair (generated once; ask whoever set up this app for the values, or generate a fresh pair with `node -e` using `node:crypto`'s EC key generation — see `webpush.js` for the exact format).
+- `VAPID_SUBJECT` — a `mailto:` address the push services can contact if something's wrong with your sends (e.g. `mailto:you@example.com`).
+
+Without these three variables set, the app runs exactly as before — the notification UI just won't have any effect (server logs "notifications disabled" on boot).
+
+Two notes if you're testing on a phone:
+- **iOS** requires the app to already be added to the home screen (Add to Home Screen) before it can ask for notification permission — this only works in Safari 16.4+.
+- **Android/Chrome** works from the browser tab directly, no install required, though installing it still gives the nicest experience.
 
 ## What's deliberately not here
 

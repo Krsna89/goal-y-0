@@ -67,7 +67,39 @@ db.exec(`
     created_at TEXT NOT NULL,
     seen INTEGER NOT NULL DEFAULT 0
   );
+
+  CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    endpoint TEXT UNIQUE NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS notification_prefs (
+    user_id TEXT PRIMARY KEY,
+    self_reminder_enabled INTEGER NOT NULL DEFAULT 0,
+    self_reminder_time TEXT NOT NULL DEFAULT '19:00',
+    self_reminder_tz TEXT NOT NULL DEFAULT 'UTC',
+    self_last_sent_date TEXT,
+    partner_mode TEXT NOT NULL DEFAULT 'off',
+    partner_quiet_threshold INTEGER NOT NULL DEFAULT 2,
+    partner_digest_freq TEXT NOT NULL DEFAULT 'daily',
+    partner_last_digest_date TEXT
+  );
 `);
+
+// Lightweight migration for columns added after the table already existed
+// on a deployed database (CREATE TABLE IF NOT EXISTS won't add columns to
+// an existing table).
+function ensureColumn(table, column, definition) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!cols.some((c) => c.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+ensureColumn('accountability_links', 'quiet_alert_for_date', 'TEXT');
 
 const uuid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -264,6 +296,115 @@ function getUserById(id) {
   return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
 }
 
+// ---------- push notifications ----------
+
+function upsertPushSubscription(userId, endpoint, p256dh, auth) {
+  const id = uuid();
+  db.prepare(`
+    INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth
+  `).run(id, userId, endpoint, p256dh, auth, now());
+}
+
+function removePushSubscription(endpoint) {
+  db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
+}
+
+function removePushSubscriptionForUser(userId, endpoint) {
+  db.prepare('DELETE FROM push_subscriptions WHERE endpoint = ? AND user_id = ?').run(endpoint, userId);
+}
+
+function getPushSubscriptionsForUser(userId) {
+  return db.prepare('SELECT * FROM push_subscriptions WHERE user_id = ?').all(userId);
+}
+
+const DEFAULT_PREFS = {
+  self_reminder_enabled: 0,
+  self_reminder_time: '19:00',
+  self_reminder_tz: 'UTC',
+  partner_mode: 'off',
+  partner_quiet_threshold: 2,
+  partner_digest_freq: 'daily',
+};
+
+function ensurePrefsRow(userId) {
+  db.prepare(`
+    INSERT OR IGNORE INTO notification_prefs
+      (user_id, self_reminder_enabled, self_reminder_time, self_reminder_tz, partner_mode, partner_quiet_threshold, partner_digest_freq)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    userId,
+    DEFAULT_PREFS.self_reminder_enabled,
+    DEFAULT_PREFS.self_reminder_time,
+    DEFAULT_PREFS.self_reminder_tz,
+    DEFAULT_PREFS.partner_mode,
+    DEFAULT_PREFS.partner_quiet_threshold,
+    DEFAULT_PREFS.partner_digest_freq
+  );
+}
+
+function getNotificationPrefs(userId) {
+  ensurePrefsRow(userId);
+  return db.prepare('SELECT * FROM notification_prefs WHERE user_id = ?').get(userId);
+}
+
+function updateNotificationPrefs(userId, fields) {
+  ensurePrefsRow(userId);
+  const allowed = [
+    'self_reminder_enabled',
+    'self_reminder_time',
+    'self_reminder_tz',
+    'partner_mode',
+    'partner_quiet_threshold',
+    'partner_digest_freq',
+  ];
+  const sets = [];
+  const values = [];
+  for (const key of allowed) {
+    if (Object.prototype.hasOwnProperty.call(fields, key)) {
+      sets.push(`${key} = ?`);
+      values.push(fields[key]);
+    }
+  }
+  if (!sets.length) return getNotificationPrefs(userId);
+  values.push(userId);
+  db.prepare(`UPDATE notification_prefs SET ${sets.join(', ')} WHERE user_id = ?`).run(...values);
+  return getNotificationPrefs(userId);
+}
+
+function markSelfReminderSent(userId, dateStr) {
+  ensurePrefsRow(userId);
+  db.prepare('UPDATE notification_prefs SET self_last_sent_date = ? WHERE user_id = ?').run(dateStr, userId);
+}
+
+function markPartnerDigestSent(userId, dateStr) {
+  ensurePrefsRow(userId);
+  db.prepare('UPDATE notification_prefs SET partner_last_digest_date = ? WHERE user_id = ?').run(dateStr, userId);
+}
+
+function getUsersWithSelfReminderEnabled() {
+  return db.prepare(`
+    SELECT u.id, u.name, u.email, p.self_reminder_time, p.self_reminder_tz, p.self_last_sent_date
+    FROM users u
+    JOIN notification_prefs p ON p.user_id = u.id
+    WHERE p.self_reminder_enabled = 1
+  `).all();
+}
+
+function getAcceptedLinksWithPartnerPrefs() {
+  return db.prepare(`
+    SELECT l.*, p.partner_mode, p.partner_quiet_threshold, p.partner_digest_freq, p.partner_last_digest_date
+    FROM accountability_links l
+    JOIN notification_prefs p ON p.user_id = l.partner_id
+    WHERE l.status = 'accepted' AND p.partner_mode != 'off'
+  `).all();
+}
+
+function setQuietAlertFlag(linkId, key) {
+  db.prepare('UPDATE accountability_links SET quiet_alert_for_date = ? WHERE id = ?').run(key, linkId);
+}
+
 module.exports = {
   uuid,
   now,
@@ -293,4 +434,15 @@ module.exports = {
   addEncouragement,
   getUnseenEncouragements,
   markEncouragementsSeen,
+  upsertPushSubscription,
+  removePushSubscription,
+  removePushSubscriptionForUser,
+  getPushSubscriptionsForUser,
+  getNotificationPrefs,
+  updateNotificationPrefs,
+  markSelfReminderSent,
+  markPartnerDigestSent,
+  getUsersWithSelfReminderEnabled,
+  getAcceptedLinksWithPartnerPrefs,
+  setQuietAlertFlag,
 };

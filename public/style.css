@@ -366,3 +366,54 @@ button {
   text-align: right;
   margin-top: 8px;
 }
+
+.reminder-card, .notify-settings-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  background: var(--card);
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.checkbox-row input { margin: 0; width: auto; }
+
+.radio-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.radio-row label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.radio-row input { margin: 0; width: auto; }
+
+.reminder-card .row, .notify-settings-card .row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+input[type="time"], select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+}

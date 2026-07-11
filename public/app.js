@@ -333,6 +333,106 @@
     }
   });
 
+  // ---------- push notifications ----------
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  async function subscribeToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error("Notifications aren't supported on this device/browser.");
+    }
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      throw new Error('Notification permission was not granted.');
+    }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      const { key } = await api('/api/push/vapid-public-key', 'GET');
+      if (!key) throw new Error("Push isn't set up on the server yet.");
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      });
+    }
+    await api('/api/push/subscribe', 'POST', { subscription: sub.toJSON() });
+    return sub;
+  }
+
+  async function loadNotificationPrefs() {
+    try {
+      const p = await api('/api/notifications/prefs', 'GET');
+      $('reminder-toggle').checked = !!p.selfReminderEnabled;
+      $('reminder-time').value = p.selfReminderTime || '19:00';
+      $('reminder-time-row').classList.toggle('hidden', !p.selfReminderEnabled);
+
+      const mode = p.partnerMode || 'off';
+      document.querySelectorAll('input[name="partner-mode"]').forEach((el) => {
+        el.checked = el.value === mode;
+      });
+      $('quiet-threshold').value = String(p.partnerQuietThreshold || 2);
+      $('digest-freq').value = p.partnerDigestFreq || 'daily';
+      $('quiet-threshold-row').classList.toggle('hidden', mode !== 'quiet');
+      $('digest-freq-row').classList.toggle('hidden', mode !== 'digest');
+    } catch (e) {
+      // Not signed in yet, or prefs endpoint unavailable — leave defaults.
+    }
+  }
+
+  $('reminder-toggle').addEventListener('change', () => {
+    $('reminder-time-row').classList.toggle('hidden', !$('reminder-toggle').checked);
+  });
+
+  $('reminder-save').addEventListener('click', async () => {
+    $('reminder-status').textContent = '';
+    const enabled = $('reminder-toggle').checked;
+    try {
+      if (enabled) await subscribeToPush();
+      await api('/api/notifications/prefs', 'POST', {
+        selfReminderEnabled: enabled,
+        selfReminderTime: $('reminder-time').value || '19:00',
+        selfReminderTz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      $('reminder-status').textContent = enabled
+        ? "Saved — you'll get a reminder if you haven't logged by then."
+        : 'Reminders turned off.';
+    } catch (e) {
+      $('reminder-status').textContent = e.message;
+    }
+  });
+
+  document.querySelectorAll('input[name="partner-mode"]').forEach((el) => {
+    el.addEventListener('change', () => {
+      const mode = el.value;
+      $('quiet-threshold-row').classList.toggle('hidden', mode !== 'quiet');
+      $('digest-freq-row').classList.toggle('hidden', mode !== 'digest');
+    });
+  });
+
+  $('partner-notify-save').addEventListener('click', async () => {
+    $('partner-notify-status').textContent = '';
+    const modeEl = document.querySelector('input[name="partner-mode"]:checked');
+    const mode = modeEl ? modeEl.value : 'off';
+    try {
+      if (mode !== 'off') await subscribeToPush();
+      await api('/api/notifications/prefs', 'POST', {
+        partnerMode: mode,
+        partnerQuietThreshold: Number($('quiet-threshold').value),
+        partnerDigestFreq: $('digest-freq').value,
+      });
+      $('partner-notify-status').textContent = 'Saved.';
+    } catch (e) {
+      $('partner-notify-status').textContent = e.message;
+    }
+  });
+
   // ---------- nav ----------
 
   $('nav-home').addEventListener('click', () => { showSubView('view-home'); loadMe(); });
@@ -349,6 +449,7 @@
     showTopScreen('screen-main');
     showSubView('view-home');
     await loadMe();
+    await loadNotificationPrefs();
   }
 
   async function boot() {
