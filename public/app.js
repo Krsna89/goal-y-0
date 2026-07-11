@@ -249,16 +249,18 @@
     $('invite-modal').classList.remove('hidden');
     $('invite-result').classList.add('hidden');
     $('invite-email').value = '';
+    $('invite-share-habits').checked = false;
     setError('invite-error', null);
   });
   $('invite-close').addEventListener('click', () => $('invite-modal').classList.add('hidden'));
 
   $('invite-send').addEventListener('click', async () => {
     const email = $('invite-email').value.trim();
+    const shareHabitNames = $('invite-share-habits').checked;
     setError('invite-error', null);
     if (!email) { setError('invite-error', 'Enter their email.'); return; }
     try {
-      const data = await api('/api/accountability/invite', 'POST', { partnerEmail: email });
+      const data = await api('/api/accountability/invite', 'POST', { partnerEmail: email, shareHabitNames });
       $('invite-link').value = data.inviteUrl;
       $('invite-result').classList.remove('hidden');
     } catch (e) {
@@ -291,12 +293,23 @@
         const statusText = w.quiet
           ? (w.lastLogged ? `Hasn't logged in a couple of days` : 'Hasn\'t logged anything yet')
           : `Last logged ${w.lastLogged === todayStr() ? 'today' : w.lastLogged}`;
+        const habitsHtml = w.habits && w.habits.length
+          ? `<div class="watch-habit-list">` +
+            w.habits.map((h) => `
+              <div class="watch-habit ${h.completed ? 'done' : ''}">
+                <span class="dot-mark">${h.completed ? '✓' : '·'}</span>
+                <span>${h.label}</span>
+              </div>
+            `).join('') +
+            `</div>`
+          : '';
         card.innerHTML = `
           <div class="top">
             <div class="name">${w.ownerName}</div>
             <div class="streak">🔥 ${w.streak}</div>
           </div>
           <div class="status ${w.quiet ? 'quiet' : ''}">${statusText}</div>
+          ${habitsHtml}
           <button class="btn-secondary encourage-btn">Send encouragement</button>
         `;
         card.querySelector('.encourage-btn').addEventListener('click', () => openEncourageModal(w.linkId, w.ownerName));

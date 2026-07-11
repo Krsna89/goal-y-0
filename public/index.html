@@ -175,8 +175,12 @@
     <div id="invite-modal" class="modal-backdrop hidden">
       <div class="modal">
         <h3 class="serif">Invite someone</h3>
-        <p class="muted" style="margin-top:-8px;">They'll be able to see your streak and send you encouragement — nothing more.</p>
+        <p class="muted" style="margin-top:-8px;">They'll be able to see your streak and send you encouragement.</p>
         <input type="email" id="invite-email" placeholder="Their email" />
+        <label class="checkbox-row" style="margin-bottom:14px;">
+          <input type="checkbox" id="invite-share-habits" />
+          <span>Also show them what my habit actually is (not just my streak)</span>
+        </label>
         <div id="invite-error" class="error-text hidden"></div>
         <button class="btn-primary" id="invite-send">Create invite link</button>
         <div class="close-row"><button class="btn-link" id="invite-close">Cancel</button></div>

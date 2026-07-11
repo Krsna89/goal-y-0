@@ -305,6 +305,29 @@ button {
   font-weight: 600;
 }
 
+.watch-habit-list {
+  margin-bottom: 12px;
+}
+
+.watch-habit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 2px 0;
+}
+
+.watch-habit.done {
+  color: var(--green-dark);
+}
+
+.watch-habit .dot-mark {
+  width: 16px;
+  text-align: center;
+  font-weight: 700;
+}
+
 .dots {
   display: flex;
   gap: 6px;
