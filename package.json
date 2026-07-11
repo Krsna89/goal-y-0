@@ -1,0 +1,13 @@
+{
+  "name": "gratyent-lite",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Two daily habits, one nominated accountability partner.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
