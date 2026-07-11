@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+  <title>Goal-y-o — Small steps, watched by someone who cares</title>
+  <link rel="stylesheet" href="/style.css" />
+
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#3f5b45" />
+  <link rel="icon" href="/icons/favicon-32.png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Goal-y-o" />
+</head>
+<body>
+  <div id="app">
+
+    <!-- SIGN IN -->
+    <div id="screen-signin" class="screen center-screen hidden">
+      <div class="card auth-card">
+        <div class="brand" style="justify-content:center;">
+          <span class="dot">🌿</span>
+          <span class="serif">Goal-y-o</span>
+        </div>
+        <h1 class="serif" style="font-size:22px;">Two small habits. One person who notices.</h1>
+        <p class="tagline">No tracking, no forms. Just tap what you did today.</p>
+        <input type="text" id="signin-name" placeholder="Your name" />
+        <input type="email" id="signin-email" placeholder="Your email" />
+        <div id="signin-error" class="error-text hidden"></div>
+        <button class="btn-primary" id="signin-btn">Get started</button>
+      </div>
+    </div>
+
+    <!-- ACCEPT INVITE -->
+    <div id="screen-accept" class="screen center-screen hidden">
+      <div class="card auth-card">
+        <div class="brand" style="justify-content:center;">
+          <span class="dot">🌿</span>
+          <span class="serif">Goal-y-o</span>
+        </div>
+        <h1 class="serif" id="accept-heading" style="font-size:20px;">Someone wants you to see their progress</h1>
+        <p class="tagline" id="accept-sub">You'll be able to see their streak and send encouragement — nothing else.</p>
+        <input type="text" id="accept-name" placeholder="Your name" />
+        <input type="email" id="accept-email" placeholder="Your email" />
+        <div id="accept-error" class="error-text hidden"></div>
+        <button class="btn-primary" id="accept-btn">Accept &amp; view progress</button>
+      </div>
+    </div>
+
+    <!-- ONBOARDING: choose habit(s) -->
+    <div id="screen-onboarding" class="screen center-screen hidden">
+      <div class="card auth-card">
+        <div class="brand" style="justify-content:center;">
+          <span class="dot">🌿</span>
+          <span class="serif">Goal-y-o</span>
+        </div>
+        <h1 class="serif" id="onboarding-heading" style="font-size:20px;">What's one habit you want to work on?</h1>
+        <p class="tagline" id="onboarding-sub">Something small and specific — you can add more later.</p>
+        <input type="text" id="onboarding-input" placeholder="e.g. Walk after dinner" />
+        <div id="onboarding-error" class="error-text hidden"></div>
+        <button class="btn-primary" id="onboarding-add">Add habit</button>
+        <div id="onboarding-done-row" class="hidden" style="margin-top:14px;">
+          <button class="btn-link" id="onboarding-finish">I'm done — take me to my dashboard →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN APP (home / watching) -->
+    <div id="screen-main" class="screen hidden">
+      <div class="header">
+        <div class="brand">
+          <span class="dot">🌿</span>
+          <span class="serif">Goal-y-o</span>
+        </div>
+        <div class="nav">
+          <a id="nav-home" class="active">Home</a>
+          <a id="nav-watching">Watching</a>
+          <a id="nav-signout">Sign out</a>
+        </div>
+      </div>
+
+      <!-- HOME VIEW -->
+      <div id="view-home" class="screen">
+        <div id="encourage-banner" class="encourage-banner hidden"></div>
+
+        <div class="streak-banner">
+          <div>
+            <div class="num" id="streak-num">0</div>
+            <div class="label">day streak</div>
+          </div>
+          <div style="font-size:32px;">🔥</div>
+        </div>
+
+        <div id="habit-list"></div>
+
+        <div id="add-habit-row" style="margin-bottom:18px;">
+          <button class="btn-secondary" id="open-add-habit">+ Add another habit</button>
+        </div>
+
+        <div id="weight-card" class="weight-card hidden">
+          <div class="section-title" style="margin-top:0;">Weekly check-in</div>
+          <div class="row">
+            <input type="number" id="weight-input" placeholder="Weight (kg)" step="0.1" />
+            <button class="btn-secondary" id="weight-save">Save</button>
+          </div>
+        </div>
+
+        <div class="section-title">Accountability</div>
+        <div class="invite-card">
+          <div style="margin-bottom:8px; font-size:14px;">Nominate someone to see your progress and cheer you on.</div>
+          <button class="btn-secondary" id="open-invite">+ Invite someone</button>
+          <div id="invite-result" class="hidden" style="margin-top:12px;">
+            <div class="muted">Share this link with them (text or WhatsApp works great):</div>
+            <div class="copy-row">
+              <input type="text" id="invite-link" readonly />
+              <button class="btn-secondary" id="copy-invite">Copy</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WATCHING VIEW -->
+      <div id="view-watching" class="screen hidden">
+        <div class="section-title" style="margin-top:0;">People you're watching</div>
+        <div id="watching-list"></div>
+      </div>
+    </div>
+
+    <!-- INVITE MODAL -->
+    <div id="invite-modal" class="modal-backdrop hidden">
+      <div class="modal">
+        <h3 class="serif">Invite someone</h3>
+        <p class="muted" style="margin-top:-8px;">They'll be able to see your streak and send you encouragement — nothing more.</p>
+        <input type="email" id="invite-email" placeholder="Their email" />
+        <div id="invite-error" class="error-text hidden"></div>
+        <button class="btn-primary" id="invite-send">Create invite link</button>
+        <div class="close-row"><button class="btn-link" id="invite-close">Cancel</button></div>
+      </div>
+    </div>
+
+    <!-- ADD HABIT MODAL -->
+    <div id="add-habit-modal" class="modal-backdrop hidden">
+      <div class="modal">
+        <h3 class="serif">Add a habit</h3>
+        <input type="text" id="add-habit-input" placeholder="e.g. 10 min walk after lunch" />
+        <div id="add-habit-error" class="error-text hidden"></div>
+        <button class="btn-primary" id="add-habit-save">Add habit</button>
+        <div class="close-row"><button class="btn-link" id="add-habit-close">Cancel</button></div>
+      </div>
+    </div>
+
+    <!-- ENCOURAGE MODAL -->
+    <div id="encourage-modal" class="modal-backdrop hidden">
+      <div class="modal">
+        <h3 class="serif" id="encourage-heading">Send encouragement</h3>
+        <textarea id="encourage-text" placeholder="You're doing great, keep it up!"></textarea>
+        <div id="encourage-error" class="error-text hidden"></div>
+        <button class="btn-primary" id="encourage-send">Send</button>
+        <div class="close-row"><button class="btn-link" id="encourage-close">Cancel</button></div>
+      </div>
+    </div>
+
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
