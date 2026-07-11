@@ -1,0 +1,368 @@
+:root {
+  --cream: #faf6ee;
+  --card: #ffffff;
+  --ink: #2f3a30;
+  --muted: #7c8577;
+  --green: #3f5b45;
+  --green-dark: #2c4030;
+  --green-soft: #e7efe6;
+  --amber: #b5762c;
+  --amber-soft: #fbeee0;
+  --border: #e7e1d3;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.serif {
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+#app {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.brand .dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--green-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--green-dark);
+  font-size: 16px;
+}
+
+.nav {
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
+}
+
+.nav a {
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 999px;
+}
+
+.nav a.active {
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+.screen { padding: 20px; }
+.hidden { display: none !important; }
+
+.center-screen {
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+}
+
+.auth-card h1 {
+  margin: 8px 0 4px;
+}
+
+.auth-card p.tagline {
+  color: var(--muted);
+  margin-bottom: 24px;
+  font-size: 15px;
+}
+
+input[type="text"], input[type="email"], input[type="number"], textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 15px;
+  margin-bottom: 12px;
+  background: var(--cream);
+  color: var(--ink);
+  font-family: inherit;
+}
+
+textarea { resize: vertical; min-height: 60px; }
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-primary {
+  width: 100%;
+  background: var(--green);
+  color: white;
+  border: none;
+  padding: 13px 16px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.btn-primary:hover { background: var(--green-dark); }
+
+.btn-secondary {
+  background: var(--green-soft);
+  color: var(--green-dark);
+  border: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--green);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.error-text {
+  color: #b3452f;
+  font-size: 13px;
+  margin: -6px 0 12px;
+  text-align: left;
+}
+
+.streak-banner {
+  background: var(--green-soft);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.streak-banner .num {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green-dark);
+}
+
+.streak-banner .label {
+  font-size: 13px;
+  color: var(--green-dark);
+}
+
+.habit-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.habit-card.done {
+  background: var(--green-soft);
+  border-color: var(--green);
+}
+
+.habit-card .text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.habit-check {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+  font-size: 16px;
+}
+
+.habit-card.done .habit-check {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.section-title {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin: 24px 0 10px;
+}
+
+.weight-card, .invite-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  background: var(--card);
+}
+
+.weight-card .row, .invite-card .row {
+  display: flex;
+  gap: 10px;
+}
+
+.weight-card input { margin-bottom: 0; flex: 1; }
+
+.encourage-banner {
+  background: var(--amber-soft);
+  border: 1px solid #eecfa2;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #7a4d1c;
+}
+
+.watch-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  background: var(--card);
+}
+
+.watch-card .top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.watch-card .name {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.watch-card .streak {
+  font-size: 13px;
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
+.watch-card .status {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.watch-card .status.quiet {
+  color: #b3452f;
+  font-weight: 600;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.dots span.on { background: var(--green); }
+
+.copy-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.copy-row input {
+  margin-bottom: 0;
+  font-size: 13px;
+  background: var(--cream);
+}
+
+.muted { color: var(--muted); font-size: 14px; }
+
+.empty-state {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 20px;
+  font-size: 14px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 10;
+}
+
+.modal {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 380px;
+  width: 100%;
+}
+
+.modal h3 { margin-top: 0; }
+
+.close-row {
+  text-align: right;
+  margin-top: 8px;
+}
