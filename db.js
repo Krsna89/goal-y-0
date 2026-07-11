@@ -86,7 +86,8 @@ db.exec(`
     partner_mode TEXT NOT NULL DEFAULT 'off',
     partner_quiet_threshold INTEGER NOT NULL DEFAULT 2,
     partner_digest_freq TEXT NOT NULL DEFAULT 'daily',
-    partner_last_digest_date TEXT
+    partner_last_digest_date TEXT,
+    encouragement_push_enabled INTEGER NOT NULL DEFAULT 0
   );
 `);
 
@@ -101,6 +102,7 @@ function ensureColumn(table, column, definition) {
 }
 ensureColumn('accountability_links', 'quiet_alert_for_date', 'TEXT');
 ensureColumn('accountability_links', 'share_habit_names', 'INTEGER NOT NULL DEFAULT 0');
+ensureColumn('notification_prefs', 'encouragement_push_enabled', 'INTEGER NOT NULL DEFAULT 0');
 
 const uuid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -333,13 +335,14 @@ const DEFAULT_PREFS = {
   partner_mode: 'off',
   partner_quiet_threshold: 2,
   partner_digest_freq: 'daily',
+  encouragement_push_enabled: 0,
 };
 
 function ensurePrefsRow(userId) {
   db.prepare(`
     INSERT OR IGNORE INTO notification_prefs
-      (user_id, self_reminder_enabled, self_reminder_time, self_reminder_tz, partner_mode, partner_quiet_threshold, partner_digest_freq)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+      (user_id, self_reminder_enabled, self_reminder_time, self_reminder_tz, partner_mode, partner_quiet_threshold, partner_digest_freq, encouragement_push_enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     userId,
     DEFAULT_PREFS.self_reminder_enabled,
@@ -347,7 +350,8 @@ function ensurePrefsRow(userId) {
     DEFAULT_PREFS.self_reminder_tz,
     DEFAULT_PREFS.partner_mode,
     DEFAULT_PREFS.partner_quiet_threshold,
-    DEFAULT_PREFS.partner_digest_freq
+    DEFAULT_PREFS.partner_digest_freq,
+    DEFAULT_PREFS.encouragement_push_enabled
   );
 }
 
@@ -365,6 +369,7 @@ function updateNotificationPrefs(userId, fields) {
     'partner_mode',
     'partner_quiet_threshold',
     'partner_digest_freq',
+    'encouragement_push_enabled',
   ];
   const sets = [];
   const values = [];

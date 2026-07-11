@@ -245,6 +245,26 @@ async function handleApi(req, res, url) {
     const message = (body.message || '').trim().slice(0, 280);
     if (!message) return sendJson(res, 400, { error: 'Message required.' });
     store.addEncouragement(linkId, message);
+
+    // Encouragement is a direct response from a real person, so — unlike
+    // the scheduled reminder sweep — push it immediately if the recipient
+    // has opted in, rather than waiting for the next 5-minute sweep.
+    try {
+      const prefs = store.getNotificationPrefs(link.owner_id);
+      if (prefs.encouragement_push_enabled) {
+        const subs = store.getPushSubscriptionsForUser(link.owner_id);
+        for (const sub of subs) {
+          await sendAndCleanup(sub, {
+            title: 'Goal-y-o',
+            body: `${user.name} sent you encouragement: "${message}"`,
+            tag: 'encouragement-' + linkId,
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Encouragement push failed:', e);
+    }
+
     return sendJson(res, 200, { ok: true });
   }
 
@@ -287,11 +307,13 @@ async function handleApi(req, res, url) {
       partnerMode: p.partner_mode,
       partnerQuietThreshold: p.partner_quiet_threshold,
       partnerDigestFreq: p.partner_digest_freq,
+      encouragementPushEnabled: !!p.encouragement_push_enabled,
     });
   }
 
   // POST /api/notifications/prefs { selfReminderEnabled?, selfReminderTime?, selfReminderTz?,
-  //                                  partnerMode?, partnerQuietThreshold?, partnerDigestFreq? }
+  //                                  partnerMode?, partnerQuietThreshold?, partnerDigestFreq?,
+  //                                  encouragementPushEnabled? }
   if (pathname === '/api/notifications/prefs' && req.method === 'POST') {
     const user = getAuthedUser(req);
     if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
@@ -315,6 +337,9 @@ async function handleApi(req, res, url) {
     if (['daily', 'weekly'].includes(body.partnerDigestFreq)) {
       fields.partner_digest_freq = body.partnerDigestFreq;
     }
+    if (typeof body.encouragementPushEnabled === 'boolean') {
+      fields.encouragement_push_enabled = body.encouragementPushEnabled ? 1 : 0;
+    }
     const p = store.updateNotificationPrefs(user.id, fields);
     return sendJson(res, 200, {
       selfReminderEnabled: !!p.self_reminder_enabled,
@@ -323,6 +348,7 @@ async function handleApi(req, res, url) {
       partnerMode: p.partner_mode,
       partnerQuietThreshold: p.partner_quiet_threshold,
       partnerDigestFreq: p.partner_digest_freq,
+      encouragementPushEnabled: !!p.encouragement_push_enabled,
     });
   }
 
