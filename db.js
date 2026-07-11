@@ -100,6 +100,7 @@ function ensureColumn(table, column, definition) {
   }
 }
 ensureColumn('accountability_links', 'quiet_alert_for_date', 'TEXT');
+ensureColumn('accountability_links', 'share_habit_names', 'INTEGER NOT NULL DEFAULT 0');
 
 const uuid = () => crypto.randomUUID();
 const now = () => new Date().toISOString();
@@ -233,13 +234,13 @@ function lastWeightDate(userId) {
 
 // ---------- accountability ----------
 
-function createInvite(ownerId, partnerEmail) {
+function createInvite(ownerId, partnerEmail, shareHabitNames) {
   const id = uuid();
   const token = uuid();
   db.prepare(`
-    INSERT INTO accountability_links (id, owner_id, partner_email, invite_token, status, created_at)
-    VALUES (?, ?, ?, ?, 'pending', ?)
-  `).run(id, ownerId, partnerEmail.toLowerCase().trim(), token, now());
+    INSERT INTO accountability_links (id, owner_id, partner_email, invite_token, status, created_at, share_habit_names)
+    VALUES (?, ?, ?, ?, 'pending', ?, ?)
+  `).run(id, ownerId, partnerEmail.toLowerCase().trim(), token, now(), shareHabitNames ? 1 : 0);
   return { id, token };
 }
 
@@ -265,6 +266,12 @@ function getLinksWatchedBy(userId) {
 
 function getLinkById(id) {
   return db.prepare('SELECT * FROM accountability_links WHERE id = ?').get(id);
+}
+
+function getHabitsWithTodayStatus(userId) {
+  const habits = getHabitsForUser(userId);
+  const loggedToday = getHabitsForDate(userId, todayStr());
+  return habits.map((h) => ({ id: h.id, label: h.label, completed: !!loggedToday[h.id] }));
 }
 
 function addEncouragement(linkId, message) {
@@ -431,6 +438,7 @@ module.exports = {
   getLinksOwnedBy,
   getLinksWatchedBy,
   getLinkById,
+  getHabitsWithTodayStatus,
   addEncouragement,
   getUnseenEncouragements,
   markEncouragementsSeen,

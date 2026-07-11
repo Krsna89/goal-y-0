@@ -162,7 +162,7 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { weights: store.getWeights(user.id) });
   }
 
-  // POST /api/accountability/invite { partnerEmail }
+  // POST /api/accountability/invite { partnerEmail, shareHabitNames? }
   if (pathname === '/api/accountability/invite' && req.method === 'POST') {
     const user = getAuthedUser(req);
     if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
@@ -170,7 +170,7 @@ async function handleApi(req, res, url) {
     if (!isValidEmail(body.partnerEmail)) {
       return sendJson(res, 400, { error: 'Enter a valid email.' });
     }
-    const { token } = store.createInvite(user.id, body.partnerEmail);
+    const { token } = store.createInvite(user.id, body.partnerEmail, !!body.shareHabitNames);
     const inviteUrl = `${url.origin}/invite/${token}`;
     return sendJson(res, 200, { inviteUrl, token });
   }
@@ -216,7 +216,7 @@ async function handleApi(req, res, url) {
     const result = links.map((link) => {
       const owner = store.getUserById(link.owner_id);
       const view = publicUserView(link.owner_id);
-      return {
+      const entry = {
         linkId: link.id,
         ownerName: owner ? owner.name : 'Someone',
         streak: view.streak,
@@ -224,6 +224,10 @@ async function handleApi(req, res, url) {
         quiet: view.quiet,
         today: view.habits,
       };
+      if (link.share_habit_names) {
+        entry.habits = store.getHabitsWithTodayStatus(link.owner_id);
+      }
+      return entry;
     });
     return sendJson(res, 200, { watching: result });
   }
