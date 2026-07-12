@@ -355,6 +355,35 @@ button {
   background: var(--cream);
 }
 
+.invite-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--green-soft);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.invite-success-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--green);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.invite-success-title {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--green-dark);
+}
+
 .muted { color: var(--muted); font-size: 14px; }
 
 .empty-state {

@@ -247,9 +247,13 @@
 
   $('open-invite').addEventListener('click', () => {
     $('invite-modal').classList.remove('hidden');
+    $('invite-form').classList.remove('hidden');
     $('invite-result').classList.add('hidden');
     $('invite-email').value = '';
     $('invite-share-habits').checked = false;
+    $('invite-send').disabled = false;
+    $('invite-send').textContent = 'Create invite link';
+    $('invite-close').textContent = 'Cancel';
     setError('invite-error', null);
   });
   $('invite-close').addEventListener('click', () => $('invite-modal').classList.add('hidden'));
@@ -259,12 +263,26 @@
     const shareHabitNames = $('invite-share-habits').checked;
     setError('invite-error', null);
     if (!email) { setError('invite-error', 'Enter their email.'); return; }
+    $('invite-send').disabled = true;
+    $('invite-send').textContent = 'Creating link…';
     try {
       const data = await api('/api/accountability/invite', 'POST', { partnerEmail: email, shareHabitNames });
       $('invite-link').value = data.inviteUrl;
+      $('invite-form').classList.add('hidden');
       $('invite-result').classList.remove('hidden');
+      $('invite-close').textContent = 'Close';
+      try {
+        $('invite-link').select();
+        document.execCommand('copy');
+        $('copy-invite').textContent = 'Copied!';
+      } catch (copyErr) {
+        // Clipboard copy is best-effort; the link is still visible to copy manually.
+      }
     } catch (e) {
       setError('invite-error', e.message);
+    } finally {
+      $('invite-send').disabled = false;
+      $('invite-send').textContent = 'Create invite link';
     }
   });
 
@@ -394,10 +412,27 @@
       $('digest-freq').value = p.partnerDigestFreq || 'daily';
       $('quiet-threshold-row').classList.toggle('hidden', mode !== 'quiet');
       $('digest-freq-row').classList.toggle('hidden', mode !== 'digest');
+
+      $('encouragement-toggle').checked = !!p.encouragementPushEnabled;
     } catch (e) {
       // Not signed in yet, or prefs endpoint unavailable — leave defaults.
     }
   }
+
+  $('encouragement-toggle').addEventListener('change', async () => {
+    $('encouragement-status').textContent = '';
+    const enabled = $('encouragement-toggle').checked;
+    try {
+      if (enabled) await subscribeToPush();
+      await api('/api/notifications/prefs', 'POST', { encouragementPushEnabled: enabled });
+      $('encouragement-status').textContent = enabled
+        ? "Saved — you'll get a push the moment someone cheers you on."
+        : 'Turned off.';
+    } catch (e) {
+      $('encouragement-toggle').checked = !enabled;
+      $('encouragement-status').textContent = e.message;
+    }
+  });
 
   $('reminder-toggle').addEventListener('change', () => {
     $('reminder-time-row').classList.toggle('hidden', !$('reminder-toggle').checked);

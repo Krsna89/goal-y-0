@@ -120,17 +120,18 @@
           <div id="reminder-status" class="muted" style="margin-top:8px; font-size:13px;"></div>
         </div>
 
+        <div class="reminder-card">
+          <label class="checkbox-row">
+            <input type="checkbox" id="encouragement-toggle" />
+            <span>Notify me when someone sends encouragement</span>
+          </label>
+          <div id="encouragement-status" class="muted" style="margin-top:8px; font-size:13px;"></div>
+        </div>
+
         <div class="section-title">Accountability</div>
         <div class="invite-card">
           <div style="margin-bottom:8px; font-size:14px;">Nominate someone to see your progress and cheer you on.</div>
           <button class="btn-secondary" id="open-invite">+ Invite someone</button>
-          <div id="invite-result" class="hidden" style="margin-top:12px;">
-            <div class="muted">Share this link with them (text or WhatsApp works great):</div>
-            <div class="copy-row">
-              <input type="text" id="invite-link" readonly />
-              <button class="btn-secondary" id="copy-invite">Copy</button>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -175,14 +176,32 @@
     <div id="invite-modal" class="modal-backdrop hidden">
       <div class="modal">
         <h3 class="serif">Invite someone</h3>
-        <p class="muted" style="margin-top:-8px;">They'll be able to see your streak and send you encouragement.</p>
-        <input type="email" id="invite-email" placeholder="Their email" />
-        <label class="checkbox-row" style="margin-bottom:14px;">
-          <input type="checkbox" id="invite-share-habits" />
-          <span>Also show them what my habit actually is (not just my streak)</span>
-        </label>
-        <div id="invite-error" class="error-text hidden"></div>
-        <button class="btn-primary" id="invite-send">Create invite link</button>
+
+        <div id="invite-form">
+          <p class="muted" style="margin-top:-8px;">They'll be able to see your streak and send you encouragement.</p>
+          <input type="email" id="invite-email" placeholder="Their email" />
+          <label class="checkbox-row" style="margin-bottom:14px;">
+            <input type="checkbox" id="invite-share-habits" />
+            <span>Also show them what my habit actually is (not just my streak)</span>
+          </label>
+          <div id="invite-error" class="error-text hidden"></div>
+          <button class="btn-primary" id="invite-send">Create invite link</button>
+        </div>
+
+        <div id="invite-result" class="hidden">
+          <div class="invite-success">
+            <span class="invite-success-icon">✓</span>
+            <div>
+              <div class="invite-success-title">Invite created</div>
+              <div class="muted" style="font-size:13px;">Link copied — paste it to them in a text or WhatsApp.</div>
+            </div>
+          </div>
+          <div class="copy-row">
+            <input type="text" id="invite-link" readonly />
+            <button class="btn-secondary" id="copy-invite">Copy</button>
+          </div>
+        </div>
+
         <div class="close-row"><button class="btn-link" id="invite-close">Cancel</button></div>
       </div>
     </div>
