@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gratyent-v4';
+const CACHE_NAME = 'gratyent-v5';
 const SHELL_FILES = [
   '/',
   '/index.html',
