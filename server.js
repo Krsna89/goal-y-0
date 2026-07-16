@@ -430,7 +430,13 @@ async function runSelfReminders() {
     } catch (e) {
       continue; // unrecognized timezone string — skip rather than crash the sweep
     }
-    if (hhmm !== u.self_reminder_time) continue;
+    // Compare as zero-padded HH:MM strings (lexicographic order == time
+    // order). We check "has the reminder time passed" rather than "is it
+    // exactly this minute", because the sweep only runs every 5 minutes on
+    // a schedule anchored to server start time — an exact-minute match
+    // would silently miss most chosen times forever. The self_last_sent_date
+    // dedup below ensures this still only fires once per day.
+    if (hhmm < u.self_reminder_time) continue;
     if (u.self_last_sent_date === todayLocal) continue;
 
     const loggedToday = store.getHabitsForDate(u.id, store.todayStr());
