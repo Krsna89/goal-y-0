@@ -70,9 +70,7 @@ function publicUserView(userId) {
   for (const h of userHabits) habits[h.id] = !!loggedToday[h.id];
   const streak = store.calcStreak(userId);
   const lastLogged = store.lastLoggedDate(userId);
-  const lastWeight = store.lastWeightDate(userId);
-  const weightDue = !lastWeight || store.daysSince(lastWeight) >= 7;
-  return { habits, streak, lastLogged, weightDue, quiet: store.daysSince(lastLogged) >= 2 };
+  return { habits, streak, lastLogged, quiet: store.daysSince(lastLogged) >= 2 };
 }
 
 async function handleApi(req, res, url) {
@@ -103,7 +101,6 @@ async function handleApi(req, res, url) {
       today: view.habits,
       streak: view.streak,
       lastLogged: view.lastLogged,
-      weightDue: view.weightDue,
       encouragements: encouragements.map((e) => ({ message: e.message, createdAt: e.created_at })),
     });
   }
@@ -140,26 +137,6 @@ async function handleApi(req, res, url) {
     store.logHabit(user.id, body.habitId, date, !!body.completed);
     const view = publicUserView(user.id);
     return sendJson(res, 200, { today: view.habits, streak: view.streak });
-  }
-
-  // POST /api/weight { weight, unit, date? }
-  if (pathname === '/api/weight' && req.method === 'POST') {
-    const user = getAuthedUser(req);
-    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
-    const body = await readBody(req);
-    const weight = Number(body.weight);
-    if (!weight || weight <= 0 || weight > 500) {
-      return sendJson(res, 400, { error: 'Enter a valid weight.' });
-    }
-    store.logWeight(user.id, weight, body.unit || 'kg', body.date || store.todayStr());
-    return sendJson(res, 200, { ok: true });
-  }
-
-  // GET /api/weight
-  if (pathname === '/api/weight' && req.method === 'GET') {
-    const user = getAuthedUser(req);
-    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
-    return sendJson(res, 200, { weights: store.getWeights(user.id) });
   }
 
   // POST /api/accountability/invite { partnerEmail, shareHabitNames? }
