@@ -243,7 +243,7 @@ button {
   margin: 24px 0 10px;
 }
 
-.weight-card, .invite-card {
+.invite-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 18px 20px;
@@ -251,12 +251,10 @@ button {
   background: var(--card);
 }
 
-.weight-card .row, .invite-card .row {
+.invite-card .row {
   display: flex;
   gap: 10px;
 }
-
-.weight-card input { margin-bottom: 0; flex: 1; }
 
 .encourage-banner {
   background: var(--amber-soft);

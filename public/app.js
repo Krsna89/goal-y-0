@@ -187,8 +187,6 @@
     });
 
     $('open-add-habit').textContent = (data.habits && data.habits.length) ? '+ Add another habit' : '+ Add a habit';
-
-    $('weight-card').classList.toggle('hidden', !data.weightDue);
   }
 
   async function toggleHabit(habitId, completed) {
@@ -228,18 +226,6 @@
       await loadMe();
     } catch (e) {
       setError('add-habit-error', e.message);
-    }
-  });
-
-  $('weight-save').addEventListener('click', async () => {
-    const val = $('weight-input').value;
-    if (!val) return;
-    try {
-      await api('/api/weight', 'POST', { weight: Number(val), unit: 'kg' });
-      $('weight-card').classList.add('hidden');
-      $('weight-input').value = '';
-    } catch (e) {
-      alert(e.message);
     }
   });
 
