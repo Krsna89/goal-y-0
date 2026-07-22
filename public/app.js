@@ -77,6 +77,7 @@
       showTopScreen('screen-main');
       showSubView('view-home');
       renderHome(data);
+      loadCalendar();
     }
   }
 
@@ -156,6 +157,7 @@
     state.habits = data.habits;
     state.today = data.today;
     renderHome(data);
+    loadCalendar();
   }
 
   function renderHome(data) {
@@ -202,8 +204,36 @@
         card.classList.toggle('done', done);
         card.querySelector('.habit-check').textContent = done ? '✓' : '';
       });
+      loadCalendar();
     } catch (e) {
       alert(e.message);
+    }
+  }
+
+  // ---------- calendar ----------
+
+  async function loadCalendar() {
+    const grid = $('cal-grid');
+    if (!grid) return;
+    try {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+      const approxStart = new Date(today);
+      approxStart.setUTCDate(approxStart.getUTCDate() - 34); // ~5 weeks back
+      approxStart.setUTCDate(approxStart.getUTCDate() - approxStart.getUTCDay()); // roll back to Sunday
+      const days = Math.round((today - approxStart) / 86400000) + 1;
+      const data = await api('/api/habits/calendar?days=' + days, 'GET');
+      const todayStr = today.toISOString().slice(0, 10);
+      grid.innerHTML = '';
+      (data.days || []).forEach((d) => {
+        const cell = document.createElement('div');
+        const dayNum = Number(d.date.slice(8, 10));
+        cell.className = 'cal-day' + (d.logged ? ' logged' : '') + (d.date === todayStr ? ' today' : '');
+        cell.textContent = dayNum;
+        grid.appendChild(cell);
+      });
+    } catch (e) {
+      // Not signed in yet, or endpoint unavailable — leave the grid empty.
     }
   }
 
