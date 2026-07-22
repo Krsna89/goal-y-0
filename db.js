@@ -210,6 +210,15 @@ function lastLoggedDate(userId) {
   return dates.length ? dates[0] : null;
 }
 
+function getLoggedDatesInRange(userId, startDate, endDate) {
+  // dates where at least one habit was completed, within [startDate, endDate]
+  const rows = db.prepare(`
+    SELECT DISTINCT date FROM habit_logs
+    WHERE user_id = ? AND completed = 1 AND date >= ? AND date <= ?
+  `).all(userId, startDate, endDate);
+  return rows.map((r) => r.date);
+}
+
 function daysSince(dateStr) {
   if (!dateStr) return Infinity;
   const then = new Date(dateStr + 'T00:00:00Z').getTime();
@@ -433,6 +442,7 @@ module.exports = {
   getHabitsForDate,
   calcStreak,
   lastLoggedDate,
+  getLoggedDatesInRange,
   daysSince,
   logWeight,
   getWeights,

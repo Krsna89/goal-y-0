@@ -139,6 +139,28 @@ async function handleApi(req, res, url) {
     return sendJson(res, 200, { today: view.habits, streak: view.streak });
   }
 
+  // GET /api/habits/calendar?days=35  — logged/not-logged per day, oldest first
+  if (pathname === '/api/habits/calendar' && req.method === 'GET') {
+    const user = getAuthedUser(req);
+    if (!user) return sendJson(res, 401, { error: 'Not signed in.' });
+    const requested = parseInt(url.searchParams.get('days'), 10);
+    const days = Number.isFinite(requested) ? Math.min(Math.max(requested, 7), 90) : 35;
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - (days - 1));
+    const startStr = start.toISOString().slice(0, 10);
+    const endStr = end.toISOString().slice(0, 10);
+    const loggedSet = new Set(store.getLoggedDatesInRange(user.id, startStr, endStr));
+    const result = [];
+    const cursor = new Date(start);
+    for (let i = 0; i < days; i++) {
+      const d = cursor.toISOString().slice(0, 10);
+      result.push({ date: d, logged: loggedSet.has(d) });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return sendJson(res, 200, { days: result });
+  }
+
   // POST /api/accountability/invite { partnerEmail, shareHabitNames? }
   if (pathname === '/api/accountability/invite' && req.method === 'POST') {
     const user = getAuthedUser(req);
